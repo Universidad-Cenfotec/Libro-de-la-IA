@@ -5,7 +5,6 @@ Contenido del libro digital de IA
 
 ---
 # Capítulos
-# Capítulos
 
 01. [Infraestructura computacional](https://github.com/Universidad-Cenfotec/Libro-de-la-IA/tree/main/01.%20%20Infraestructura%20computacional)
 
