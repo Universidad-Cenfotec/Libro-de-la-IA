@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Perceptrón Analógico 5x5</title>
+  <style>
+    :root {
+      --bg: #f4f1ea;
+      --panel: #242424;
+      --panel-2: #333;
+      --text: #f2f2f2;
+      --muted: #bdbdbd;
+      --accent: #e63946;
+      --line: #4a4a4a;
+      --needle: #111;
+      --paper: #fff8e7;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Georgia, "Times New Roman", serif;
+      background: radial-gradient(circle at top, #ffffff 0%, var(--bg) 65%);
+      color: #111;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 28px;
+    }
+
+    .app {
+      width: min(1200px, 100%);
+      background: var(--paper);
+      border: 3px solid #111;
+      border-radius: 18px;
+      box-shadow: 0 18px 40px rgba(0,0,0,0.22);
+      padding: 24px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      text-align: center;
+      font-size: 34px;
+      letter-spacing: 0.5px;
+    }
+
+    .subtitle {
+      text-align: center;
+      margin: 0 0 24px;
+      font-size: 16px;
+      color: #444;
+    }
+
+    .machine {
+      display: grid;
+      grid-template-columns: 1fr 1.35fr 1.1fr;
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    .module {
+      background: #fdf6df;
+      border: 2px solid #111;
+      border-radius: 16px;
+      padding: 18px;
+      position: relative;
+      box-shadow: inset 0 0 0 2px rgba(255,255,255,0.45);
+    }
+
+    .module.dark {
+      background: var(--panel);
+      color: var(--text);
+      border-color: #111;
+    }
+
+    .module h2 {
+      margin: 0 0 14px;
+      font-size: 20px;
+      text-align: center;
+      letter-spacing: 0.3px;
+    }
+
+    .grid5 {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
+      justify-items: center;
+      align-items: center;
+    }
+
+    .input-button {
+      width: 46px;
+      height: 46px;
+      border-radius: 9px;
+      border: 2px solid #111;
+      background: #f7f7f7;
+      box-shadow: inset 0 4px 0 rgba(255,255,255,0.8), 0 4px 0 #111;
+      cursor: pointer;
+      transition: transform 0.08s, background 0.15s, box-shadow 0.15s;
+      position: relative;
+    }
+
+    .input-button.on {
+      background: var(--accent);
+      box-shadow: inset 0 0 10px rgba(255,255,255,0.5), 0 4px 0 #111, 0 0 18px rgba(230,57,70,0.75);
+    }
+
+    .input-button:active {
+      transform: translateY(3px);
+      box-shadow: inset 0 3px 5px rgba(0,0,0,0.25), 0 1px 0 #111;
+    }
+
+    .pot-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 13px 10px;
+      justify-items: center;
+      align-items: center;
+    }
+
+    .pot-wrap {
+      width: 54px;
+      text-align: center;
+      user-select: none;
+    }
+
+    .pot {
+      width: 48px;
+      height: 48px;
+      margin: 0 auto 4px;
+      border-radius: 50%;
+      border: 3px solid #111;
+      background: radial-gradient(circle at 35% 30%, #efefef, #999 58%, #565656 100%);
+      position: relative;
+      cursor: ns-resize;
+      box-shadow: inset -4px -5px 8px rgba(0,0,0,0.35), inset 3px 3px 8px rgba(255,255,255,0.7), 0 3px 0 #111;
+    }
+
+    .pot::after {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 7px;
+      width: 4px;
+      height: 17px;
+      background: #111;
+      border-radius: 2px;
+      transform: translateX(-50%);
+      transform-origin: 50% 17px;
+    }
+
+    .pot-value {
+      font-family: "Courier New", monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .readout {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 14px;
+    }
+
+    .meter {
+      position: relative;
+      height: 240px;
+      background: #fafafa;
+      border: 3px solid #111;
+      border-radius: 16px 16px 80px 80px;
+      overflow: hidden;
+      box-shadow: inset 0 0 30px rgba(0,0,0,0.12);
+    }
+
+    .scale {
+      position: absolute;
+      inset: 18px 18px 60px;
+      border-bottom: 3px solid #111;
+      border-radius: 100% 100% 0 0;
+    }
+
+    .ticks {
+      position: absolute;
+      left: 50%;
+      bottom: 52px;
+      width: 0;
+      height: 0;
+    }
+
+    .tick {
+      position: absolute;
+      width: 2px;
+      height: 15px;
+      background: #111;
+      transform-origin: 1px 118px;
+    }
+
+    .tick.major {
+      height: 24px;
+      width: 3px;
+    }
+
+    .tick-label {
+      position: absolute;
+      font-family: "Courier New", monospace;
+      font-size: 13px;
+      transform-origin: center;
+      color: #111;
+    }
+
+    .needle {
+      position: absolute;
+      left: 50%;
+      bottom: 52px;
+      width: 5px;
+      height: 116px;
+      background: var(--needle);
+      border-radius: 4px;
+      transform-origin: 50% 100%;
+      transform: rotate(-70deg);
+      transition: transform 0.22s ease-out;
+      box-shadow: 0 0 4px rgba(0,0,0,0.4);
+    }
+
+    .pivot {
+      position: absolute;
+      left: 50%;
+      bottom: 38px;
+      width: 34px;
+      height: 34px;
+      background: #111;
+      border-radius: 50%;
+      transform: translateX(-50%);
+      border: 5px solid #777;
+    }
+
+    .meter-title {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 13px;
+      text-align: center;
+      font-weight: bold;
+      letter-spacing: 2px;
+    }
+
+    .values {
+      background: #111;
+      color: #f5f5f5;
+      border-radius: 12px;
+      padding: 14px;
+      font-family: "Courier New", monospace;
+      font-size: 15px;
+      line-height: 1.7;
+    }
+
+    .bar-wrap {
+      margin-top: 10px;
+      height: 18px;
+      border: 2px solid #111;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #eee;
+    }
+
+    .bar {
+      height: 100%;
+      width: 50%;
+      background: linear-gradient(90deg, #eaeaea, #e63946);
+      transition: width 0.2s ease-out;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    button.control {
+      border: 2px solid #111;
+      background: #fff;
+      border-radius: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 15px;
+      box-shadow: 0 4px 0 #111;
+    }
+
+    button.control:active {
+      transform: translateY(3px);
+      box-shadow: 0 1px 0 #111;
+    }
+
+    .formula {
+      text-align: center;
+      margin-top: 18px;
+      font-family: "Courier New", monospace;
+      font-size: 14px;
+      color: #333;
+    }
+
+    @media (max-width: 980px) {
+      .machine {
+        grid-template-columns: 1fr;
+      }
+
+      .input-button {
+        width: 54px;
+        height: 54px;
+      }
+
+      .pot-wrap {
+        width: 58px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <h1>Perceptrón analógico 5 × 5</h1>
+    <p class="subtitle">Entradas binarias, pesos ajustables como potenciómetros y lectura final tipo VU meter.</p>
+
+    <section class="machine">
+      <div class="module">
+        <h2>Entradas binarias</h2>
+        <div id="inputGrid" class="grid5"></div>
+        <div class="formula">xᵢ ∈ {0,1}</div>
+      </div>
+
+      <div class="module dark">
+        <h2>Potenciómetros de peso</h2>
+        <div id="potGrid" class="pot-grid"></div>
+        <div class="formula" style="color:#ddd;">wᵢ ∈ [-1,1]</div>
+      </div>
+
+      <div class="module readout">
+        <h2>Lectura de salida</h2>
+        <div class="meter" aria-label="VU meter de la salida del perceptrón">
+          <div class="scale"></div>
+          <div id="ticks" class="ticks"></div>
+          <div id="needle" class="needle"></div>
+          <div class="pivot"></div>
+          <div class="meter-title">SIGMOIDE</div>
+        </div>
+        <div class="values">
+          suma z = <span id="sumValue">0.000</span><br />
+          σ(z) = <span id="sigmoidValue">0.500</span>
+          <div class="bar-wrap"><div id="sigmoidBar" class="bar"></div></div>
+        </div>
+      </div>
+    </section>
+
+    <div class="controls">
+      <button class="control" id="randomInputs">Entradas aleatorias</button>
+      <button class="control" id="randomWeights">Pesos aleatorios</button>
+      <button class="control" id="clearInputs">Apagar entradas</button>
+      <button class="control" id="zeroWeights">Centrar pesos</button>
+    </div>
+
+    <div class="formula">z = Σ xᵢwᵢ &nbsp;&nbsp; | &nbsp;&nbsp; σ(z) = 1 / (1 + e<sup>-z</sup>)</div>
+  </main>
+
+  <script>
+    const N = 25;
+    const inputs = Array(N).fill(0);
+    const weights = Array(N).fill(0);
+
+    const inputGrid = document.getElementById('inputGrid');
+    const potGrid = document.getElementById('potGrid');
+    const needle = document.getElementById('needle');
+    const sumValue = document.getElementById('sumValue');
+    const sigmoidValue = document.getElementById('sigmoidValue');
+    const sigmoidBar = document.getElementById('sigmoidBar');
+    const ticks = document.getElementById('ticks');
+
+    function sigmoid(z) {
+      return 1 / (1 + Math.exp(-z));
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function potAngle(weight) {
+      return -135 + ((weight + 1) / 2) * 270;
+    }
+
+    function renderPot(index) {
+      const pot = document.querySelector(`[data-pot="${index}"]`);
+      const value = document.querySelector(`[data-pot-value="${index}"]`);
+      const angle = potAngle(weights[index]);
+      pot.style.transform = `rotate(${angle}deg)`;
+      value.textContent = weights[index].toFixed(2);
+    }
+
+    function update() {
+      let z = 0;
+      for (let i = 0; i < N; i++) z += inputs[i] * weights[i];
+
+      const y = sigmoid(z);
+      const angle = -70 + y * 140;
+
+      needle.style.transform = `rotate(${angle}deg)`;
+      sumValue.textContent = z.toFixed(3);
+      sigmoidValue.textContent = y.toFixed(3);
+      sigmoidBar.style.width = `${y * 100}%`;
+    }
+
+    function createInputs() {
+      for (let i = 0; i < N; i++) {
+        const btn = document.createElement('button');
+        btn.className = 'input-button';
+        btn.setAttribute('aria-label', `Entrada ${i + 1}`);
+        btn.addEventListener('click', () => {
+          inputs[i] = inputs[i] ? 0 : 1;
+          btn.classList.toggle('on', inputs[i] === 1);
+          update();
+        });
+        inputGrid.appendChild(btn);
+      }
+    }
+
+    function createPots() {
+      for (let i = 0; i < N; i++) {
+        const wrap = document.createElement('div');
+        wrap.className = 'pot-wrap';
+
+        const pot = document.createElement('div');
+        pot.className = 'pot';
+        pot.dataset.pot = i;
+        pot.setAttribute('aria-label', `Peso ${i + 1}`);
+
+        const value = document.createElement('div');
+        value.className = 'pot-value';
+        value.dataset.potValue = i;
+
+        let dragging = false;
+        let startY = 0;
+        let startWeight = 0;
+
+        pot.addEventListener('pointerdown', (event) => {
+          dragging = true;
+          startY = event.clientY;
+          startWeight = weights[i];
+          pot.setPointerCapture(event.pointerId);
+        });
+
+        pot.addEventListener('pointermove', (event) => {
+          if (!dragging) return;
+          const delta = (startY - event.clientY) / 80;
+          weights[i] = clamp(startWeight + delta, -1, 1);
+          renderPot(i);
+          update();
+        });
+
+        pot.addEventListener('pointerup', () => dragging = false);
+        pot.addEventListener('pointercancel', () => dragging = false);
+
+        pot.addEventListener('wheel', (event) => {
+          event.preventDefault();
+          weights[i] = clamp(weights[i] + (event.deltaY < 0 ? 0.05 : -0.05), -1, 1);
+          renderPot(i);
+          update();
+        });
+
+        wrap.appendChild(pot);
+        wrap.appendChild(value);
+        potGrid.appendChild(wrap);
+        renderPot(i);
+      }
+    }
+
+    function createTicks() {
+      for (let i = 0; i <= 10; i++) {
+        const angle = -70 + i * 14;
+        const tick = document.createElement('div');
+        tick.className = i % 5 === 0 ? 'tick major' : 'tick';
+        tick.style.transform = `rotate(${angle}deg) translateY(-118px)`;
+        ticks.appendChild(tick);
+      }
+
+      const labels = [
+        { text: '0', angle: -70 },
+        { text: '0.5', angle: 0 },
+        { text: '1', angle: 70 }
+      ];
+
+      labels.forEach(label => {
+        const radius = 82;
+        const rad = (label.angle - 90) * Math.PI / 180;
+        const el = document.createElement('div');
+        el.className = 'tick-label';
+        el.textContent = label.text;
+        el.style.left = `${Math.cos(rad) * radius - 10}px`;
+        el.style.top = `${Math.sin(rad) * radius - 8}px`;
+        ticks.appendChild(el);
+      });
+    }
+
+    document.getElementById('randomInputs').addEventListener('click', () => {
+      document.querySelectorAll('.input-button').forEach((btn, i) => {
+        inputs[i] = Math.random() > 0.5 ? 1 : 0;
+        btn.classList.toggle('on', inputs[i] === 1);
+      });
+      update();
+    });
+
+    document.getElementById('randomWeights').addEventListener('click', () => {
+      for (let i = 0; i < N; i++) {
+        weights[i] = Math.random() * 2 - 1;
+        renderPot(i);
+      }
+      update();
+    });
+
+    document.getElementById('clearInputs').addEventListener('click', () => {
+      document.querySelectorAll('.input-button').forEach((btn, i) => {
+        inputs[i] = 0;
+        btn.classList.remove('on');
+      });
+      update();
+    });
+
+    document.getElementById('zeroWeights').addEventListener('click', () => {
+      for (let i = 0; i < N; i++) {
+        weights[i] = 0;
+        renderPot(i);
+      }
+      update();
+    });
+
+    createInputs();
+    createPots();
+    createTicks();
+    update();
+  </script>
+</body>
+</html>
