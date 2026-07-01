@@ -12,6 +12,9 @@
     >
 
     <style>
+        /* ============================================================
+           Variables y configuración general
+           ============================================================ */
         :root {
             --cenfotec-blue: #0067d9;
             --cenfotec-blue-dark: #004a9f;
@@ -25,8 +28,13 @@
             --shadow: 0 20px 50px rgba(7, 27, 52, 0.12);
         }
 
-        * {
+        *,
+        *::before,
+        *::after {
             box-sizing: border-box;
+        }
+
+        * {
             margin: 0;
             padding: 0;
         }
@@ -37,8 +45,8 @@
 
         body {
             min-height: 100vh;
-            font-family: Arial, Helvetica, sans-serif;
             color: var(--text);
+            font-family: Arial, Helvetica, sans-serif;
             background:
                 radial-gradient(
                     circle at 10% 18%,
@@ -57,12 +65,16 @@
             color: inherit;
         }
 
+        /* ============================================================
+           Encabezado
+           ============================================================ */
         .site-header {
             position: sticky;
             top: 0;
             z-index: 20;
             background: rgba(255, 255, 255, 0.94);
             border-bottom: 1px solid var(--border);
+            -webkit-backdrop-filter: blur(14px);
             backdrop-filter: blur(14px);
         }
 
@@ -96,6 +108,9 @@
             text-transform: uppercase;
         }
 
+        /* ============================================================
+           Contenido principal y presentación
+           ============================================================ */
         main {
             width: min(1120px, calc(100% - 40px));
             margin: 0 auto;
@@ -151,7 +166,6 @@
 
         .hero-visual {
             min-height: 300px;
-            position: relative;
             display: grid;
             place-items: center;
         }
@@ -176,6 +190,9 @@
             display: block;
         }
 
+        /* ============================================================
+           Recursos interactivos
+           ============================================================ */
         .resources-section {
             padding: 30px 0 95px;
         }
@@ -183,7 +200,7 @@
         .section-heading {
             margin-bottom: 32px;
             display: flex;
-            align-items: end;
+            align-items: flex-end;
             justify-content: space-between;
             gap: 30px;
         }
@@ -244,17 +261,17 @@
             right: -63px;
             bottom: -63px;
             background: var(--cenfotec-blue);
-            transform: rotate(45deg);
             opacity: 0.95;
+            transform: rotate(45deg);
             transition: transform 180ms ease;
         }
 
         .resource-card:hover,
         .resource-card:focus-visible {
-            transform: translateY(-7px);
             border-color: rgba(0, 103, 217, 0.4);
             box-shadow: var(--shadow);
             outline: none;
+            transform: translateY(-7px);
         }
 
         .resource-card:hover::before,
@@ -326,6 +343,9 @@
             transform: translateX(5px);
         }
 
+        /* ============================================================
+           Pie de página
+           ============================================================ */
         .site-footer {
             color: var(--white);
             background: var(--navy);
@@ -360,7 +380,10 @@
             text-decoration: underline;
         }
 
-        @media (max-width: 860px) {
+        /* ============================================================
+           Diseño adaptable
+           ============================================================ */
+        @media (max-width: 900px) {
             .hero {
                 grid-template-columns: 1fr;
                 gap: 24px;
@@ -376,13 +399,19 @@
             }
 
             .resource-grid {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
 
             .section-heading {
-                align-items: start;
+                align-items: flex-start;
                 flex-direction: column;
                 gap: 12px;
+            }
+        }
+
+        @media (max-width: 620px) {
+            .resource-grid {
+                grid-template-columns: 1fr;
             }
         }
 
@@ -443,10 +472,6 @@
 <body>
     <header class="site-header">
         <div class="header-content">
-            <!--
-                Logotipo oficial publicado por Universidad CENFOTEC:
-                https://ucenfotec.ac.cr/wp-content/uploads/2021/12/Logo-Ucenfotec-250-105-.png
-            -->
             <a
                 class="official-logo"
                 href="https://ucenfotec.ac.cr/"
@@ -515,7 +540,8 @@
 
                 <p>
                     Seleccione una actividad para experimentar directamente
-                    con modelos neuronales básicos.
+                    con conceptos de inteligencia artificial, aprendizaje
+                    automático y sistemas biológicos.
                 </p>
             </div>
 
@@ -595,7 +621,6 @@
                     </span>
                 </a>
 
-
                 <a class="resource-card" href="teachable-ideasense/index.html">
                     <span class="card-number">04</span>
 
@@ -619,52 +644,62 @@
                 </a>
 
                 <a class="resource-card" href="ajuste_linea/index.html">
-    <span class="card-number">05</span>
+                    <span class="card-number">05</span>
 
-    <span class="card-icon" aria-hidden="true">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M4 19V5"/>
-            <path d="M4 19H20"/>
-            <circle cx="8" cy="10" r="1.2"/>
-            <circle cx="11" cy="8" r="1.2"/>
-            <circle cx="14" cy="14" r="1.2"/>
-            <circle cx="17" cy="12" r="1.2"/>
-            <path d="M6 16L19 7"/>
-        </svg>
-    </span>
+                    <span class="card-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+                            <path d="M4 19V5"/>
+                            <path d="M4 19H20"/>
+                            <circle cx="8" cy="10" r="1.2"/>
+                            <circle cx="11" cy="8" r="1.2"/>
+                            <circle cx="14" cy="14" r="1.2"/>
+                            <circle cx="17" cy="12" r="1.2"/>
+                            <path d="M6 16L19 7"/>
+                        </svg>
+                    </span>
 
-    <h3>Ajuste de una línea</h3>
+                    <h3>Ajuste de una línea</h3>
 
-    <p>
-        Explore cómo un modelo de inteligencia artificial ajusta
-        una línea para separar dos grupos de puntos.
-    </p>
+                    <p>
+                        Explore cómo un modelo de inteligencia artificial
+                        ajusta una línea para separar dos grupos de puntos.
+                    </p>
 
-    <span class="card-link">
-        Abrir actividad <span aria-hidden="true">→</span>
-    </span>
-</a>
+                    <span class="card-link">
+                        Abrir actividad <span aria-hidden="true">→</span>
+                    </span>
+                </a>
 
-<a class="resource-card" href="neuronas/index.html">
-    <span class="card-number">06</span>
+                <a class="resource-card" href="neuronas/index.html">
+                    <span class="card-number">06</span>
 
-    <h3>Transmisión neuronal</h3>
+                    <span class="card-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8">
+                            <circle cx="7" cy="12" r="3"/>
+                            <circle cx="18" cy="12" r="3"/>
+                            <path d="M10 12H15"/>
+                            <path d="M4.5 9.5L2.5 7.5M4 12H1.5M4.5 14.5L2.5 16.5"/>
+                            <path d="M20.5 9.5L22.5 7.5M21 12H23.5M20.5 14.5L22.5 16.5"/>
+                            <path d="M12 10.5L13.5 12L12 13.5"/>
+                        </svg>
+                    </span>
 
-    <p>
-        Explore cómo un impulso nervioso se propaga entre dos neuronas
-        mediante una sinapsis química.
-    </p>
+                    <h3>Transmisión neuronal</h3>
 
-    <span class="card-link">
-        Abrir actividad <span aria-hidden="true">→</span>
-    </span>
-</a>
-                
+                    <p>
+                        Explore cómo un impulso nervioso se propaga entre dos
+                        neuronas mediante una sinapsis química.
+                    </p>
+
+                    <span class="card-link">
+                        Abrir actividad <span aria-hidden="true">→</span>
+                    </span>
+                </a>
 
                 <!-- Futuras aplicaciones
 
                 <a class="resource-card" href="automata/index.html">
-                    <span class="card-number">04</span>
+                    <span class="card-number">07</span>
                     <h3>Autómatas finitos</h3>
                     <p>Construya y pruebe máquinas de estados.</p>
                     <span class="card-link">
@@ -673,7 +708,7 @@
                 </a>
 
                 <a class="resource-card" href="microgpt/index.html">
-                    <span class="card-number">05</span>
+                    <span class="card-number">08</span>
                     <h3>MicroGPT</h3>
                     <p>Explore el funcionamiento de un modelo de lenguaje mínimo.</p>
                     <span class="card-link">
