@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Inteligencia Artificial — Ajuste de una línea</title>
+<style>
+  :root{
+    --ink:#5f5f5f;
+    --ink-dark:#555;
+    --axis:#555;
+    --blue:#3f7ff0;
+    --blue-dark:#1749e6;
+    --paper:#fff;
+    --panel:#f6f7f9;
+    --border:#d9dde5;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%;margin:0;background:#eceef2;color:var(--ink);font-family:Arial,Helvetica,sans-serif}
+  body{display:grid;place-items:center;overflow:hidden}
+
+  .slide{
+    position:relative;
+    width:min(100vw,177.78vh);
+    height:min(100vh,56.25vw);
+    min-width:760px;
+    min-height:427px;
+    background:var(--paper);
+    overflow:hidden;
+    box-shadow:0 18px 60px rgba(0,0,0,.16);
+    padding:2.2% 4.1% 2.2% 4.1%;
+    display:grid;
+    grid-template-rows:auto 1fr auto;
+    gap:1.1%;
+  }
+
+  header h1{
+    margin:0;
+    font-size:clamp(24px,3.25vw,51px);
+    line-height:1;
+    font-weight:700;
+    letter-spacing:.2px;
+    color:#666;
+  }
+  .rule{height:7px;background:#5d5d5d;margin-top:1.2%;width:100%}
+
+  .content{
+    min-height:0;
+    display:grid;
+    grid-template-columns:70% 30%;
+    align-items:stretch;
+  }
+
+  .chart-wrap{position:relative;min-width:0;min-height:0;padding:1% 1% 0 7%}
+  #chart{width:100%;height:100%;display:block;touch-action:none;user-select:none}
+  #chart .axis{stroke:var(--axis);stroke-width:1.25;vector-effect:non-scaling-stroke}
+  #chart .line{stroke:#5e5e5e;stroke-width:4;stroke-linecap:round;vector-effect:non-scaling-stroke}
+  #chart .pt{cursor:grab;stroke:#fff;stroke-width:1.4;vector-effect:non-scaling-stroke;transition:r .12s ease,filter .12s ease}
+  #chart .pt:hover{r:6.8;filter:drop-shadow(0 1px 2px rgba(0,0,0,.2))}
+  #chart .pt.dragging{cursor:grabbing;r:7}
+  #chart .plot-bg{fill:transparent;cursor:crosshair}
+  #chart .axis-label{font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:31px;fill:#555}
+
+  .side{
+    position:relative;
+    padding:15% 2% 0 1%;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    min-width:0;
+  }
+  .formula{
+    font-family:'Cambria Math',Cambria,Georgia,'Times New Roman',serif;
+    font-style:italic;
+    font-size:clamp(30px,4.0vw,62px);
+    color:#555;
+    white-space:nowrap;
+    margin-left:-8%;
+    letter-spacing:-1px;
+  }
+  .formula .param{color:var(--blue-dark)}
+  .formula .normal{color:#555}
+  .numeric{
+    margin-top:.9rem;
+    font-family:'Cambria Math',Cambria,Georgia,'Times New Roman',serif;
+    font-size:clamp(18px,2vw,31px);
+    color:#666;
+    white-space:nowrap;
+  }
+  .numeric .num{color:var(--blue-dark);font-weight:600}
+
+  .param-card{
+    width:94%;
+    margin-top:5.5%;
+    padding:4.5% 5%;
+    background:rgba(246,247,249,.88);
+    border:1px solid var(--border);
+    border-radius:12px;
+  }
+  .param-title{font-size:clamp(13px,1.5vw,22px);margin-bottom:7%;color:#6b6b6b}
+  .control{display:grid;grid-template-columns:1.05rem 1fr 3.7rem;align-items:center;gap:.6rem;margin:6% 0}
+  .control label{font-family:Georgia,serif;font-style:italic;font-size:1.25rem;color:var(--blue-dark)}
+  .control output{font-variant-numeric:tabular-nums;text-align:right;color:#666;font-size:.92rem}
+  input[type=range]{width:100%;accent-color:var(--blue)}
+
+  .actions{display:flex;gap:.55rem;flex-wrap:wrap;margin-top:8%}
+  button{
+    border:1px solid #cdd2dc;background:#fff;color:#555;border-radius:999px;
+    padding:.55rem .85rem;font-size:.82rem;cursor:pointer;transition:.15s ease;
+  }
+  button:hover{transform:translateY(-1px);box-shadow:0 3px 10px rgba(0,0,0,.08)}
+  button.primary{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700}
+  button.active{outline:3px solid rgba(63,127,240,.18);border-color:var(--blue)}
+
+  .metrics{display:flex;gap:1rem;margin-top:6%;font-size:.78rem;color:#777;flex-wrap:wrap}
+  .metrics strong{color:#555}
+
+  footer{display:flex;justify-content:space-between;align-items:end;min-height:32px;padding-left:8.2%}
+  .hint{font-size:clamp(10px,1.05vw,15px);color:#8a8a8a;line-height:1.3}
+  .legend{display:inline-flex;gap:.8rem;margin-left:1rem;white-space:nowrap}
+  .dot{display:inline-block;width:.65rem;height:.65rem;border-radius:50%;margin-right:.25rem;vertical-align:-.05rem}
+  .dot.dark{background:#686868}.dot.blue{background:var(--blue)}
+
+  .toast{
+    position:absolute;left:50%;bottom:2.4%;transform:translateX(-50%) translateY(10px);
+    background:#292d36;color:#fff;padding:.55rem .85rem;border-radius:999px;font-size:.78rem;
+    opacity:0;pointer-events:none;transition:.2s ease;z-index:20;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media(max-width:900px){
+    .slide{min-width:0;min-height:0}
+    .param-card{padding:3.5% 4%}
+    button{padding:.4rem .65rem;font-size:.72rem}
+    .control{grid-template-columns:.9rem 1fr 3.1rem;gap:.35rem}
+    .metrics{font-size:.68rem}
+  }
+</style>
+</head>
+<body>
+  <main class="slide" aria-label="Demostración interactiva de clasificación lineal">
+    <header>
+      <h1>Inteligencia Artificial</h1>
+      <div class="rule"></div>
+    </header>
+
+    <section class="content">
+      <div class="chart-wrap">
+        <svg id="chart" viewBox="0 0 720 430" role="img" aria-label="Dos grupos de puntos separados por una línea ajustable">
+          <rect class="plot-bg" x="78" y="28" width="570" height="344"></rect>
+          <line class="axis" x1="78" y1="372" x2="648" y2="372"></line>
+          <line class="axis" x1="78" y1="382" x2="78" y2="28"></line>
+          <path d="M648 372 l-7 -4 m7 4 l-7 4" fill="none" class="axis"></path>
+          <path d="M78 28 l-4 7 m4 -7 l4 7" fill="none" class="axis"></path>
+          <text class="axis-label" x="360" y="414">x</text>
+          <text class="axis-label" x="30" y="205">y</text>
+          <line id="modelLine" class="line" x1="120" y1="310" x2="610" y2="115"></line>
+          <g id="points"></g>
+        </svg>
+      </div>
+
+      <aside class="side">
+        <div class="formula">
+          <span class="normal">f(x) = </span><span class="param">a</span><span class="normal">x + </span><span class="param">b</span>
+        </div>
+        <div class="numeric">f(x) = <span id="aEq" class="num">0.42</span>x <span id="bSign">+</span> <span id="bEq" class="num">0.22</span></div>
+
+        <div class="param-card">
+          <div class="param-title">Parámetros del modelo</div>
+          <div class="control">
+            <label for="aRange">a</label>
+            <input id="aRange" type="range" min="-1.5" max="1.8" step="0.01" value="0.42" />
+            <output id="aOut">0.42</output>
+          </div>
+          <div class="control">
+            <label for="bRange">b</label>
+            <input id="bRange" type="range" min="-0.5" max="1.4" step="0.01" value="0.22" />
+            <output id="bOut">0.22</output>
+          </div>
+          <div class="actions">
+            <button id="trainBtn" class="primary">Entrenar modelo</button>
+            <button id="resetBtn">Restablecer</button>
+            <button id="grayBtn" class="active">Agregar gris</button>
+            <button id="blueBtn">Agregar azul</button>
+          </div>
+          <div class="metrics">
+            <span>Precisión <strong id="accuracy">100%</strong></span>
+            <span>Pérdida <strong id="loss">0.184</strong></span>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <footer>
+      <div class="hint">
+        Arrastrá los puntos para cambiar los datos o hacé clic en el plano para agregar nuevos ejemplos.
+        <span class="legend"><span><i class="dot dark"></i>grupo gris</span><span><i class="dot blue"></i>grupo azul</span></span>
+      </div>
+    </footer>
+
+    <div id="toast" class="toast"></div>
+  </main>
+
+<script>
+(() => {
+  'use strict';
+
+  const svg = document.getElementById('chart');
+  const pointsLayer = document.getElementById('points');
+  const modelLine = document.getElementById('modelLine');
+  const aRange = document.getElementById('aRange');
+  const bRange = document.getElementById('bRange');
+  const aOut = document.getElementById('aOut');
+  const bOut = document.getElementById('bOut');
+  const aEq = document.getElementById('aEq');
+  const bEq = document.getElementById('bEq');
+  const bSign = document.getElementById('bSign');
+  const accuracyEl = document.getElementById('accuracy');
+  const lossEl = document.getElementById('loss');
+  const trainBtn = document.getElementById('trainBtn');
+  const resetBtn = document.getElementById('resetBtn');
+  const grayBtn = document.getElementById('grayBtn');
+  const blueBtn = document.getElementById('blueBtn');
+  const toastEl = document.getElementById('toast');
+
+  const PLOT = { x:78, y:28, w:570, h:344 };
+  const COLORS = { gray:'#696969', blue:'#3f7ff0' };
+  let addClass = 1; // 1 gris, 0 azul
+  let dragging = null;
+  let training = false;
+  let rafId = 0;
+  let weights = [-0.42, 1, -0.22]; // frontera: y = 0.42x + 0.22
+
+  const initialPoints = [
+    // grupo gris (arriba)
+    [.16,.63,1],[.19,.69,1],[.21,.61,1],[.23,.72,1],[.25,.66,1],[.27,.60,1],
+    [.28,.77,1],[.30,.68,1],[.32,.74,1],[.34,.62,1],[.36,.79,1],[.39,.69,1],
+    [.40,.83,1],[.42,.75,1],[.44,.86,1],[.46,.70,1],[.48,.79,1],[.50,.88,1],
+    [.52,.73,1],[.54,.92,1],[.56,.84,1],[.58,.68,1],[.61,.80,1],[.63,.91,1],
+    [.66,.76,1],[.70,.88,1],[.73,.70,1],[.74,.90,1],
+    // grupo azul (abajo)
+    [.33,.18,0],[.35,.25,0],[.38,.12,0],[.39,.29,0],[.42,.20,0],[.44,.34,0],
+    [.46,.14,0],[.47,.27,0],[.49,.38,0],[.51,.21,0],[.54,.33,0],[.56,.15,0],
+    [.59,.29,0],[.61,.43,0],[.63,.22,0],[.66,.38,0],[.68,.18,0],[.70,.47,0],
+    [.72,.30,0],[.75,.42,0],[.77,.24,0],[.79,.52,0],[.81,.35,0],[.83,.45,0]
+  ];
+
+  let points = initialPoints.map((p,i)=>({id:i,x:p[0],y:p[1],cls:p[2]}));
+  let nextId = points.length;
+
+  function clamp(v,min,max){ return Math.max(min,Math.min(max,v)); }
+  function sigmoid(z){
+    if(z >= 0){ const e=Math.exp(-z); return 1/(1+e); }
+    const e=Math.exp(z); return e/(1+e);
+  }
+  function dataToSvg(x,y){
+    return { x:PLOT.x + x*PLOT.w, y:PLOT.y + (1-y)*PLOT.h };
+  }
+  function svgToData(clientX,clientY){
+    const pt = svg.createSVGPoint(); pt.x=clientX; pt.y=clientY;
+    const local = pt.matrixTransform(svg.getScreenCTM().inverse());
+    return {
+      x:clamp((local.x-PLOT.x)/PLOT.w,0,1),
+      y:clamp(1-(local.y-PLOT.y)/PLOT.h,0,1),
+      localX:local.x, localY:local.y
+    };
+  }
+  function currentAB(){
+    const wy = Math.abs(weights[1]) < 1e-6 ? 1e-6 : weights[1];
+    return { a:-weights[0]/wy, b:-weights[2]/wy };
+  }
+  function setFromAB(a,b){ weights=[-a,1,-b]; }
+
+  function formatNumber(v){
+    const n=Math.abs(v)<0.005?0:v;
+    return n.toFixed(2);
+  }
+
+  function lineSegment(a,b){
+    const candidates=[];
+    const push=(x,y)=>{ if(x>=0 && x<=1 && y>=0 && y<=1) candidates.push({x,y}); };
+    push(0,b); push(1,a+b);
+    if(Math.abs(a)>1e-9){ push((0-b)/a,0); push((1-b)/a,1); }
+    const unique=[];
+    for(const p of candidates){
+      if(!unique.some(q=>Math.hypot(p.x-q.x,p.y-q.y)<1e-6)) unique.push(p);
+    }
+    if(unique.length<2) return null;
+    let best=[unique[0],unique[1]], dist=-1;
+    for(let i=0;i<unique.length;i++) for(let j=i+1;j<unique.length;j++){
+      const d=Math.hypot(unique[i].x-unique[j].x,unique[i].y-unique[j].y);
+      if(d>dist){dist=d;best=[unique[i],unique[j]];}
+    }
+    return best;
+  }
+
+  function renderPoints(){
+    pointsLayer.replaceChildren();
+    for(const p of points){
+      const c=dataToSvg(p.x,p.y);
+      const circle=document.createElementNS('http://www.w3.org/2000/svg','circle');
+      circle.setAttribute('class','pt');
+      circle.setAttribute('cx',c.x); circle.setAttribute('cy',c.y); circle.setAttribute('r','5.8');
+      circle.setAttribute('fill',p.cls?COLORS.gray:COLORS.blue);
+      circle.dataset.id=String(p.id);
+      circle.setAttribute('aria-label',p.cls?'Punto del grupo gris':'Punto del grupo azul');
+      pointsLayer.appendChild(circle);
+    }
+  }
+
+  function computeMetrics(){
+    let correct=0, loss=0;
+    for(const p of points){
+      const z=weights[0]*p.x+weights[1]*p.y+weights[2];
+      const prob=clamp(sigmoid(z),1e-8,1-1e-8);
+      const pred=prob>=.5?1:0;
+      if(pred===p.cls) correct++;
+      loss += -(p.cls*Math.log(prob)+(1-p.cls)*Math.log(1-prob));
+    }
+    return {accuracy:points.length?correct/points.length:0, loss:points.length?loss/points.length:0};
+  }
+
+  function renderModel(syncSliders=true){
+    const {a,b}=currentAB();
+    const seg=lineSegment(a,b);
+    if(seg){
+      const p1=dataToSvg(seg[0].x,seg[0].y), p2=dataToSvg(seg[1].x,seg[1].y);
+      modelLine.setAttribute('x1',p1.x);modelLine.setAttribute('y1',p1.y);
+      modelLine.setAttribute('x2',p2.x);modelLine.setAttribute('y2',p2.y);
+      modelLine.style.display='';
+    }else modelLine.style.display='none';
+
+    const fa=formatNumber(a), fb=formatNumber(Math.abs(b));
+    aEq.textContent=fa;
+    bEq.textContent=fb;
+    bSign.textContent=b<0?'−':'+';
+    aOut.value=fa; bOut.value=formatNumber(b);
+    if(syncSliders){
+      aRange.value=String(clamp(a,Number(aRange.min),Number(aRange.max)));
+      bRange.value=String(clamp(b,Number(bRange.min),Number(bRange.max)));
+    }
+    const m=computeMetrics();
+    accuracyEl.textContent=Math.round(m.accuracy*100)+'%';
+    lossEl.textContent=m.loss.toFixed(3);
+  }
+
+  function renderAll(){ renderPoints(); renderModel(); }
+
+  function stopTraining(){
+    training=false;
+    cancelAnimationFrame(rafId);
+    trainBtn.disabled=false;
+    trainBtn.textContent='Entrenar modelo';
+  }
+
+  function train(){
+    stopTraining();
+    training=true;
+    trainBtn.disabled=true;
+    trainBtn.textContent='Entrenando…';
+
+    // Inicio deliberadamente imperfecto para que el ajuste sea visible.
+    weights=[0.4,0.35,-0.45];
+    let iter=0;
+    const maxIter=650;
+    const lr=1.8;
+
+    function step(){
+      for(let batch=0;batch<5 && iter<maxIter;batch++,iter++){
+        let g0=0,g1=0,g2=0;
+        for(const p of points){
+          const z=weights[0]*p.x+weights[1]*p.y+weights[2];
+          const err=sigmoid(z)-p.cls;
+          g0+=err*p.x; g1+=err*p.y; g2+=err;
+        }
+        const n=Math.max(1,points.length);
+        weights[0]-=lr*g0/n;
+        weights[1]-=lr*g1/n;
+        weights[2]-=lr*g2/n;
+      }
+      renderModel(true);
+      if(iter<maxIter){ rafId=requestAnimationFrame(step); }
+      else{
+        training=false;
+        trainBtn.disabled=false;
+        trainBtn.textContent='Entrenar modelo';
+        showToast('Modelo ajustado a partir de los datos');
+      }
+    }
+    rafId=requestAnimationFrame(step);
+  }
+
+  function showToast(msg){
+    toastEl.textContent=msg;
+    toastEl.classList.add('show');
+    clearTimeout(showToast.t);
+    showToast.t=setTimeout(()=>toastEl.classList.remove('show'),1800);
+  }
+
+  aRange.addEventListener('input',()=>{
+    stopTraining();
+    const a=Number(aRange.value), b=Number(bRange.value);
+    setFromAB(a,b); renderModel(false);
+  });
+  bRange.addEventListener('input',()=>{
+    stopTraining();
+    const a=Number(aRange.value), b=Number(bRange.value);
+    setFromAB(a,b); renderModel(false);
+  });
+
+  trainBtn.addEventListener('click',train);
+  resetBtn.addEventListener('click',()=>{
+    stopTraining();
+    points=initialPoints.map((p,i)=>({id:i,x:p[0],y:p[1],cls:p[2]}));
+    nextId=points.length;
+    setFromAB(.42,.22);
+    renderAll();
+    showToast('Datos y parámetros restablecidos');
+  });
+
+  function setAddClass(cls){
+    addClass=cls;
+    grayBtn.classList.toggle('active',cls===1);
+    blueBtn.classList.toggle('active',cls===0);
+  }
+  grayBtn.addEventListener('click',()=>setAddClass(1));
+  blueBtn.addEventListener('click',()=>setAddClass(0));
+
+  svg.addEventListener('pointerdown',(e)=>{
+    const target=e.target;
+    if(target.classList.contains('pt')){
+      stopTraining();
+      dragging=Number(target.dataset.id);
+      target.classList.add('dragging');
+      svg.setPointerCapture(e.pointerId);
+      e.preventDefault();
+      return;
+    }
+    if(target.classList.contains('plot-bg')){
+      stopTraining();
+      const d=svgToData(e.clientX,e.clientY);
+      points.push({id:nextId++,x:d.x,y:d.y,cls:addClass});
+      renderPoints();renderModel();
+    }
+  });
+
+  svg.addEventListener('pointermove',(e)=>{
+    if(dragging===null) return;
+    const d=svgToData(e.clientX,e.clientY);
+    const p=points.find(q=>q.id===dragging);
+    if(p){ p.x=d.x;p.y=d.y;renderPoints();renderModel(); }
+  });
+  function endDrag(e){
+    if(dragging!==null){
+      dragging=null;
+      try{svg.releasePointerCapture(e.pointerId);}catch(_){ }
+    }
+  }
+  svg.addEventListener('pointerup',endDrag);
+  svg.addEventListener('pointercancel',endDrag);
+
+  // Doble clic sobre un punto para eliminarlo.
+  svg.addEventListener('dblclick',(e)=>{
+    const target=e.target;
+    if(target.classList.contains('pt')){
+      const id=Number(target.dataset.id);
+      points=points.filter(p=>p.id!==id);
+      renderAll();
+      showToast('Punto eliminado');
+      e.preventDefault();
+    }
+  });
+
+  // Atajos para presentación: T entrena, R restablece, G/B cambia clase, F pantalla completa.
+  document.addEventListener('keydown',(e)=>{
+    if(e.key.toLowerCase()==='t') train();
+    if(e.key.toLowerCase()==='r') resetBtn.click();
+    if(e.key.toLowerCase()==='g') setAddClass(1);
+    if(e.key.toLowerCase()==='b') setAddClass(0);
+    if(e.key.toLowerCase()==='f'){
+      const el=document.querySelector('.slide');
+      if(!document.fullscreenElement) el.requestFullscreen?.(); else document.exitFullscreen?.();
+    }
+  });
+
+  renderAll();
+})();
+</script>
+</body>
+</html>
