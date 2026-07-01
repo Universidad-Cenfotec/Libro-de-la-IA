@@ -19,3 +19,7 @@ Contenido del libro digital de IA
 06. [Aplicaciones de la inteligencia artificial](https://github.com/Universidad-Cenfotec/Libro-de-la-IA/tree/main/06.%20%20Aplicaciones%20de%20la%20inteligencia%20artificial)
 
 07. [Filosofía y sociedad de la IA](https://github.com/Universidad-Cenfotec/Libro-de-la-IA/tree/main/07.%20Filosof%C3%ADa%20y%20sociedad%20de%20la%20IA)
+
+## Simulaciones y Ejemplos
+
+ https://universidad-cenfotec.github.io/Libro-de-la-IA/ 
