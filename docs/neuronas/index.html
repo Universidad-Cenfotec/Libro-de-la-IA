@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Simulación de transmisión neuronal</title>
+<style>
+    :root {
+        --bg: #07111f;
+        --panel: rgba(10, 27, 47, 0.88);
+        --panel-border: rgba(117, 203, 255, 0.18);
+        --text: #eaf6ff;
+        --muted: #9bb3c8;
+        --cyan: #52d9ff;
+        --blue: #5a7dff;
+        --violet: #a46cff;
+        --pink: #ff6fcf;
+        --yellow: #ffe06b;
+        --green: #63f5bb;
+        --danger: #ff6b7a;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+        margin: 0;
+        min-height: 100%;
+        background:
+            radial-gradient(circle at 25% 10%, rgba(48, 92, 157, 0.2), transparent 34%),
+            radial-gradient(circle at 85% 25%, rgba(119, 63, 180, 0.13), transparent 30%),
+            linear-gradient(180deg, #07111f 0%, #040a12 100%);
+        color: var(--text);
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+        display: flex;
+        justify-content: center;
+        padding: 24px;
+    }
+
+    .app {
+        width: min(1280px, 100%);
+        display: grid;
+        gap: 18px;
+    }
+
+    header {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        align-items: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .title-group h1 {
+        margin: 0 0 6px;
+        font-size: clamp(1.45rem, 3vw, 2.45rem);
+        letter-spacing: -0.035em;
+    }
+
+    .title-group p {
+        margin: 0;
+        max-width: 760px;
+        color: var(--muted);
+        line-height: 1.45;
+    }
+
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        border: 1px solid var(--panel-border);
+        background: rgba(9, 28, 48, 0.75);
+        border-radius: 999px;
+        padding: 9px 13px;
+        color: #cdeeff;
+        font-size: 0.9rem;
+        white-space: nowrap;
+    }
+
+    .status-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        background: var(--green);
+        box-shadow: 0 0 14px var(--green);
+    }
+
+    .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 300px;
+        gap: 18px;
+        align-items: stretch;
+    }
+
+    .stage-card,
+    .control-card,
+    .info-card {
+        background: linear-gradient(180deg, rgba(14, 34, 58, 0.92), rgba(6, 17, 30, 0.94));
+        border: 1px solid var(--panel-border);
+        border-radius: 22px;
+        box-shadow: 0 22px 70px rgba(0,0,0,0.28);
+        backdrop-filter: blur(12px);
+    }
+
+    .stage-card {
+        position: relative;
+        overflow: hidden;
+        min-height: 610px;
+    }
+
+    .stage-topbar {
+        position: absolute;
+        z-index: 5;
+        left: 18px;
+        top: 16px;
+        right: 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        pointer-events: none;
+    }
+
+    .legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 9px 14px;
+        color: var(--muted);
+        font-size: 0.82rem;
+    }
+
+    .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+    }
+
+    .legend i {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .stage {
+        width: 100%;
+        height: 100%;
+        min-height: 610px;
+        display: block;
+        user-select: none;
+        cursor: default;
+    }
+
+    .side {
+        display: grid;
+        gap: 18px;
+        align-content: start;
+    }
+
+    .control-card,
+    .info-card {
+        padding: 18px;
+    }
+
+    .control-card h2,
+    .info-card h2 {
+        margin: 0 0 14px;
+        font-size: 1rem;
+        letter-spacing: 0.01em;
+    }
+
+    .primary-button,
+    .secondary-button {
+        border: 0;
+        width: 100%;
+        min-height: 48px;
+        border-radius: 14px;
+        font: inherit;
+        font-weight: 750;
+        cursor: pointer;
+        transition: transform .16s ease, filter .16s ease, box-shadow .16s ease;
+    }
+
+    .primary-button {
+        color: #05111a;
+        background: linear-gradient(135deg, var(--cyan), var(--green));
+        box-shadow: 0 12px 28px rgba(82, 217, 255, 0.2);
+    }
+
+    .secondary-button {
+        margin-top: 10px;
+        color: var(--text);
+        background: rgba(255,255,255,0.055);
+        border: 1px solid rgba(255,255,255,0.09);
+    }
+
+    .primary-button:hover,
+    .secondary-button:hover { transform: translateY(-1px); filter: brightness(1.07); }
+    .primary-button:active,
+    .secondary-button:active { transform: translateY(1px) scale(0.99); }
+
+    .control {
+        margin-top: 18px;
+    }
+
+    .control label {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 8px;
+        color: #d6e8f7;
+        font-size: .9rem;
+    }
+
+    .control output {
+        color: var(--cyan);
+        font-variant-numeric: tabular-nums;
+    }
+
+    input[type="range"] {
+        width: 100%;
+        accent-color: var(--cyan);
+    }
+
+    .toggle-row {
+        margin-top: 18px;
+        padding-top: 16px;
+        border-top: 1px solid rgba(255,255,255,0.08);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+        color: #d6e8f7;
+        font-size: .9rem;
+    }
+
+    .switch {
+        position: relative;
+        width: 46px;
+        height: 26px;
+        flex: 0 0 auto;
+    }
+
+    .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .slider {
+        position: absolute;
+        inset: 0;
+        background: rgba(255,255,255,.12);
+        border-radius: 999px;
+        cursor: pointer;
+        transition: .2s;
+    }
+
+    .slider::after {
+        content: "";
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        left: 3px;
+        top: 3px;
+        border-radius: 50%;
+        background: white;
+        transition: .2s;
+    }
+
+    .switch input:checked + .slider {
+        background: linear-gradient(135deg, var(--blue), var(--cyan));
+    }
+
+    .switch input:checked + .slider::after {
+        transform: translateX(20px);
+    }
+
+    .meter {
+        margin-top: 18px;
+        border: 1px solid rgba(255,255,255,.08);
+        background: rgba(2, 10, 18, .46);
+        border-radius: 14px;
+        padding: 12px;
+    }
+
+    .meter-head {
+        display: flex;
+        justify-content: space-between;
+        color: var(--muted);
+        font-size: .78rem;
+        margin-bottom: 8px;
+    }
+
+    .meter-bar {
+        height: 9px;
+        overflow: hidden;
+        border-radius: 99px;
+        background: rgba(255,255,255,.08);
+    }
+
+    .meter-fill {
+        height: 100%;
+        width: 0%;
+        border-radius: inherit;
+        background: linear-gradient(90deg, var(--blue), var(--cyan), var(--green));
+        box-shadow: 0 0 15px rgba(82, 217, 255, .5);
+        transition: width .12s linear;
+    }
+
+    .info-list {
+        display: grid;
+        gap: 12px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .info-list li {
+        display: grid;
+        grid-template-columns: 27px 1fr;
+        gap: 9px;
+        color: var(--muted);
+        line-height: 1.35;
+        font-size: .86rem;
+    }
+
+    .info-list b {
+        color: var(--text);
+    }
+
+    .step-number {
+        width: 27px;
+        height: 27px;
+        display: grid;
+        place-items: center;
+        border-radius: 8px;
+        color: #06111c;
+        font-weight: 850;
+        background: linear-gradient(135deg, var(--cyan), var(--green));
+    }
+
+    .message {
+        margin-top: 14px;
+        min-height: 54px;
+        padding: 12px 13px;
+        border-radius: 13px;
+        color: #cce8f7;
+        background: rgba(82, 217, 255, .07);
+        border: 1px solid rgba(82, 217, 255, .14);
+        line-height: 1.35;
+        font-size: .87rem;
+    }
+
+    .footer-note {
+        text-align: center;
+        color: #6f879a;
+        font-size: .78rem;
+    }
+
+    /* SVG */
+    .neuron-label {
+        fill: #dff6ff;
+        font-size: 18px;
+        font-weight: 760;
+        letter-spacing: .02em;
+    }
+
+    .sub-label {
+        fill: #8fb0c5;
+        font-size: 12px;
+    }
+
+    .anatomy-label {
+        fill: #9bb8ca;
+        font-size: 11px;
+    }
+
+    .leader {
+        stroke: rgba(180, 222, 245, .34);
+        stroke-width: 1;
+        stroke-dasharray: 4 5;
+    }
+
+    .membrane {
+        fill: url(#somaGradient);
+        stroke: rgba(133, 229, 255, .78);
+        stroke-width: 2.2;
+        filter: url(#softGlow);
+    }
+
+    .membrane.second {
+        fill: url(#somaGradient2);
+        stroke: rgba(186, 139, 255, .82);
+    }
+
+    .nucleus {
+        fill: rgba(7, 24, 38, .78);
+        stroke: rgba(222, 250, 255, .24);
+        stroke-width: 1.5;
+    }
+
+    .nucleus-dot {
+        fill: rgba(120, 232, 255, .52);
+        filter: url(#tinyGlow);
+    }
+
+    .neuron-path {
+        fill: none;
+        stroke: rgba(96, 203, 255, .8);
+        stroke-width: 11;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        filter: url(#softGlow);
+    }
+
+    .dendrite {
+        fill: none;
+        stroke: rgba(96, 203, 255, .58);
+        stroke-width: 6;
+        stroke-linecap: round;
+    }
+
+    .dendrite.second {
+        stroke: rgba(175, 119, 255, .58);
+    }
+
+    .axon {
+        fill: none;
+        stroke: rgba(108, 190, 245, .46);
+        stroke-width: 9;
+        stroke-linecap: round;
+    }
+
+    .myelin {
+        fill: none;
+        stroke: rgba(220, 248, 255, .52);
+        stroke-width: 15;
+        stroke-linecap: round;
+        stroke-dasharray: 29 19;
+        filter: url(#tinyGlow);
+    }
+
+    .terminal {
+        fill: url(#terminalGradient);
+        stroke: rgba(255,255,255,.36);
+        stroke-width: 1.2;
+        filter: url(#softGlow);
+    }
+
+    .synapse-zone {
+        fill: rgba(255,255,255,.025);
+        stroke: rgba(255,255,255,.1);
+        stroke-dasharray: 5 6;
+    }
+
+    .pulse {
+        fill: var(--yellow);
+        filter: url(#pulseGlow);
+        opacity: 0;
+    }
+
+    .pulse-ring {
+        fill: none;
+        stroke: var(--yellow);
+        stroke-width: 2;
+        filter: url(#pulseGlow);
+        opacity: 0;
+    }
+
+    .transmitter {
+        fill: var(--pink);
+        filter: url(#tinyGlow);
+        opacity: 0;
+    }
+
+    .receptor {
+        fill: rgba(164,108,255,.24);
+        stroke: rgba(218,190,255,.76);
+        stroke-width: 1.4;
+    }
+
+    .receptor.active {
+        fill: rgba(99,245,187,.9);
+        stroke: white;
+        filter: url(#tinyGlow);
+    }
+
+    .current-line {
+        stroke: rgba(255,255,255,.08);
+        stroke-width: 1;
+    }
+
+    .chart-label {
+        fill: #8099ad;
+        font-size: 10px;
+    }
+
+    .potential-line {
+        fill: none;
+        stroke: var(--green);
+        stroke-width: 2.2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+        filter: url(#tinyGlow);
+    }
+
+    .chart-frame {
+        fill: rgba(2, 10, 18, .45);
+        stroke: rgba(255,255,255,.1);
+    }
+
+    .stage-hint {
+        fill: #7894a8;
+        font-size: 12px;
+    }
+
+    .click-zone {
+        fill: transparent;
+        cursor: pointer;
+    }
+
+    .click-zone:hover + .hover-ring {
+        opacity: .52;
+    }
+
+    .hover-ring {
+        fill: none;
+        stroke: var(--cyan);
+        stroke-width: 2;
+        opacity: 0;
+        filter: url(#tinyGlow);
+        pointer-events: none;
+        transition: opacity .18s ease;
+    }
+
+    @media (max-width: 920px) {
+        body { padding: 14px; }
+        .layout { grid-template-columns: 1fr; }
+        .side { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .stage-card, .stage { min-height: 540px; }
+    }
+
+    @media (max-width: 650px) {
+        .side { grid-template-columns: 1fr; }
+        .stage-card, .stage { min-height: 500px; }
+        .stage-topbar { position: static; padding: 14px 14px 0; }
+        .legend { font-size: .75rem; }
+        .anatomy-label, .leader { display: none; }
+    }
+</style>
+</head>
+<body>
+<main class="app">
+    <header>
+        <div class="title-group">
+            <h1>Transmisión entre neuronas</h1>
+            <p>
+                Simulación interactiva de un potencial de acción que recorre el axón,
+                libera neurotransmisores en la sinapsis y activa una segunda neurona.
+            </p>
+        </div>
+        <div class="status-pill">
+            <span class="status-dot"></span>
+            Simulación lista
+        </div>
+    </header>
+
+    <section class="layout">
+        <div class="stage-card">
+            <div class="stage-topbar">
+                <div class="legend">
+                    <span><i style="background:var(--yellow)"></i>Potencial de acción</span>
+                    <span><i style="background:var(--pink)"></i>Neurotransmisor</span>
+                    <span><i style="background:var(--green)"></i>Activación postsináptica</span>
+                </div>
+            </div>
+
+            <svg class="stage" id="stage" viewBox="0 0 980 610" role="img" aria-label="Dos neuronas conectadas por una sinapsis">
+                <defs>
+                    <radialGradient id="somaGradient" cx="38%" cy="30%">
+                        <stop offset="0%" stop-color="#7ee7ff"/>
+                        <stop offset="45%" stop-color="#168bc0"/>
+                        <stop offset="100%" stop-color="#0c3958"/>
+                    </radialGradient>
+                    <radialGradient id="somaGradient2" cx="38%" cy="30%">
+                        <stop offset="0%" stop-color="#d9b7ff"/>
+                        <stop offset="45%" stop-color="#7a42c7"/>
+                        <stop offset="100%" stop-color="#352253"/>
+                    </radialGradient>
+                    <radialGradient id="terminalGradient">
+                        <stop offset="0%" stop-color="#ffb0e6"/>
+                        <stop offset="65%" stop-color="#b0439a"/>
+                        <stop offset="100%" stop-color="#4d2257"/>
+                    </radialGradient>
+                    <filter id="softGlow" x="-80%" y="-80%" width="260%" height="260%">
+                        <feGaussianBlur stdDeviation="4.2" result="blur"/>
+                        <feMerge>
+                            <feMergeNode in="blur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                    <filter id="tinyGlow" x="-100%" y="-100%" width="300%" height="300%">
+                        <feGaussianBlur stdDeviation="2.1" result="blur"/>
+                        <feMerge>
+                            <feMergeNode in="blur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                    <filter id="pulseGlow" x="-180%" y="-180%" width="460%" height="460%">
+                        <feGaussianBlur stdDeviation="7" result="blur"/>
+                        <feMerge>
+                            <feMergeNode in="blur"/>
+                            <feMergeNode in="SourceGraphic"/>
+                        </feMerge>
+                    </filter>
+                </defs>
+
+                <!-- Fondo técnico -->
+                <g opacity=".35">
+                    <path d="M35 92 H945" class="current-line"/>
+                    <path d="M35 530 H945" class="current-line"/>
+                    <path d="M490 42 V565" class="current-line" stroke-dasharray="4 10"/>
+                </g>
+
+                <!-- Etiquetas principales -->
+                <text x="72" y="74" class="neuron-label">Neurona presináptica</text>
+                <text x="748" y="74" class="neuron-label">Neurona postsináptica</text>
+                <text x="443" y="126" class="sub-label">SINAPSIS QUÍMICA</text>
+
+                <!-- Neurona 1: dendritas -->
+                <g id="neuron1">
+                    <path class="dendrite" d="M175 290 C130 245, 109 211, 72 196"/>
+                    <path class="dendrite" d="M176 282 C126 278, 93 259, 54 268"/>
+                    <path class="dendrite" d="M174 304 C126 323, 95 354, 63 382"/>
+                    <path class="dendrite" d="M184 269 C158 215, 154 168, 127 136"/>
+                    <path class="dendrite" d="M190 317 C165 367, 157 412, 132 450"/>
+                    <path class="dendrite" d="M144 218 C125 206, 112 187, 108 167"/>
+                    <path class="dendrite" d="M113 341 C89 343, 67 337, 48 326"/>
+                    <path class="dendrite" d="M144 394 C122 410, 110 429, 106 451"/>
+
+                    <path class="neuron-path" d="M202 289 C258 282, 303 278, 360 281"/>
+                    <circle cx="196" cy="292" r="64" class="membrane"/>
+                    <circle cx="196" cy="292" r="25" class="nucleus"/>
+                    <circle cx="187" cy="283" r="5" class="nucleus-dot"/>
+                    <circle cx="205" cy="301" r="4" class="nucleus-dot"/>
+
+                    <!-- Axón y mielina -->
+                    <path id="axonPath" class="axon" d="M250 291 C325 272, 382 286, 448 291"/>
+                    <path class="myelin" d="M265 288 C330 274, 384 286, 435 291"/>
+
+                    <!-- Terminal presináptica -->
+                    <path class="neuron-path" d="M438 291 C455 291, 466 291, 477 291"/>
+                    <circle cx="484" cy="291" r="27" class="terminal"/>
+                    <circle cx="477" cy="284" r="4" fill="rgba(255,255,255,.42)"/>
+                    <circle cx="491" cy="298" r="3" fill="rgba(255,255,255,.3)"/>
+
+                    <!-- Zona clic -->
+                    <circle cx="196" cy="292" r="82" class="click-zone" id="neuron1Click"/>
+                    <circle cx="196" cy="292" r="72" class="hover-ring"/>
+                </g>
+
+                <!-- Sinapsis -->
+                <g id="synapse">
+                    <rect x="510" y="220" width="94" height="142" rx="42" class="synapse-zone"/>
+                    <line x1="520" y1="225" x2="520" y2="357" stroke="rgba(255,255,255,.18)" stroke-width="2"/>
+                    <line x1="594" y1="225" x2="594" y2="357" stroke="rgba(255,255,255,.18)" stroke-width="2"/>
+
+                    <!-- Receptores -->
+                    <g id="receptors">
+                        <path class="receptor" d="M593 250 h13 v7 h-4 v13 h-5 v-13 h-4z"/>
+                        <path class="receptor" d="M593 279 h13 v7 h-4 v13 h-5 v-13 h-4z"/>
+                        <path class="receptor" d="M593 308 h13 v7 h-4 v13 h-5 v-13 h-4z"/>
+                        <path class="receptor" d="M593 337 h13 v7 h-4 v13 h-5 v-13 h-4z"/>
+                    </g>
+
+                    <!-- Neurotransmisores -->
+                    <circle class="transmitter" cx="520" cy="255" r="5"/>
+                    <circle class="transmitter" cx="520" cy="278" r="4"/>
+                    <circle class="transmitter" cx="520" cy="301" r="5"/>
+                    <circle class="transmitter" cx="520" cy="325" r="4.5"/>
+                    <circle class="transmitter" cx="520" cy="342" r="3.5"/>
+                    <circle class="transmitter" cx="520" cy="289" r="3.5"/>
+
+                    <text x="526" y="386" class="anatomy-label">hendidura sináptica</text>
+                    <line x1="557" y1="370" x2="557" y2="354" class="leader"/>
+                </g>
+
+                <!-- Neurona 2 -->
+                <g id="neuron2">
+                    <path class="dendrite second" d="M680 292 C642 265, 621 246, 601 223"/>
+                    <path class="dendrite second" d="M680 302 C641 309, 624 328, 602 351"/>
+                    <path class="dendrite second" d="M703 266 C687 222, 688 181, 710 145"/>
+                    <path class="dendrite second" d="M707 323 C692 367, 694 411, 717 447"/>
+                    <path class="dendrite second" d="M754 274 C795 238, 829 222, 875 209"/>
+                    <path class="dendrite second" d="M758 294 C807 287, 845 294, 897 315"/>
+                    <path class="dendrite second" d="M751 318 C791 350, 826 372, 866 394"/>
+                    <path class="dendrite second" d="M826 246 C850 238, 873 238, 895 243"/>
+                    <path class="dendrite second" d="M819 363 C846 371, 867 383, 883 400"/>
+
+                    <path class="neuron-path" d="M608 291 C636 291, 659 291, 683 291" style="stroke:rgba(174,117,255,.72)"/>
+                    <circle cx="716" cy="292" r="64" class="membrane second" id="soma2"/>
+                    <circle cx="716" cy="292" r="25" class="nucleus"/>
+                    <circle cx="707" cy="283" r="5" class="nucleus-dot" style="fill:rgba(215,176,255,.56)"/>
+                    <circle cx="725" cy="301" r="4" class="nucleus-dot" style="fill:rgba(215,176,255,.56)"/>
+
+                    <circle cx="716" cy="292" r="82" class="click-zone" id="neuron2Click"/>
+                    <circle cx="716" cy="292" r="72" class="hover-ring" style="stroke:var(--violet)"/>
+                </g>
+
+                <!-- Pulso -->
+                <circle id="pulse" class="pulse" cx="196" cy="292" r="9"/>
+                <circle id="pulseRing" class="pulse-ring" cx="196" cy="292" r="17"/>
+
+                <!-- Señal postsináptica -->
+                <circle id="postPulse" class="pulse" cx="612" cy="291" r="8" style="fill:var(--green)"/>
+                <circle id="postRing" class="pulse-ring" cx="612" cy="291" r="16" style="stroke:var(--green)"/>
+
+                <!-- Etiquetas anatómicas -->
+                <text x="122" y="500" class="anatomy-label">dendritas</text>
+                <line x1="150" y1="486" x2="165" y2="420" class="leader"/>
+                <text x="183" y="383" class="anatomy-label">soma</text>
+                <line x1="200" y1="367" x2="200" y2="347" class="leader"/>
+                <text x="325" y="245" class="anatomy-label">axón mielinizado</text>
+                <line x1="365" y1="253" x2="365" y2="278" class="leader"/>
+                <text x="440" y="200" class="anatomy-label">botón terminal</text>
+                <line x1="481" y1="209" x2="484" y2="263" class="leader"/>
+                <text x="688" y="383" class="anatomy-label">soma</text>
+                <line x1="705" y1="368" x2="710" y2="348" class="leader"/>
+
+                <!-- Mini gráfico de potencial -->
+                <g transform="translate(308 452)">
+                    <rect width="370" height="100" rx="14" class="chart-frame"/>
+                    <text x="14" y="21" class="chart-label">POTENCIAL DE MEMBRANA</text>
+                    <text x="14" y="88" class="chart-label">−70 mV</text>
+                    <line x1="63" y1="80" x2="352" y2="80" class="current-line"/>
+                    <line x1="63" y1="46" x2="352" y2="46" class="current-line" stroke-dasharray="4 5"/>
+                    <path id="potentialLine" class="potential-line" d="M64 80 L352 80"/>
+                </g>
+
+                <text x="343" y="584" class="stage-hint">Haga clic sobre la primera neurona o use “Estimular neurona”.</text>
+            </svg>
+        </div>
+
+        <aside class="side">
+            <section class="control-card">
+                <h2>Controles</h2>
+                <button class="primary-button" id="stimulateBtn">Estimular neurona</button>
+                <button class="secondary-button" id="resetBtn">Reiniciar</button>
+
+                <div class="control">
+                    <label for="intensity">
+                        Intensidad del estímulo
+                        <output id="intensityOut">70%</output>
+                    </label>
+                    <input id="intensity" type="range" min="20" max="100" value="70">
+                </div>
+
+                <div class="control">
+                    <label for="speed">
+                        Velocidad de propagación
+                        <output id="speedOut">1.0×</output>
+                    </label>
+                    <input id="speed" type="range" min="50" max="180" value="100">
+                </div>
+
+                <div class="toggle-row">
+                    <span>Estimulación automática</span>
+                    <label class="switch" aria-label="Activar estimulación automática">
+                        <input id="autoToggle" type="checkbox">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="meter">
+                    <div class="meter-head">
+                        <span>Actividad sináptica</span>
+                        <span id="meterValue">0%</span>
+                    </div>
+                    <div class="meter-bar">
+                        <div class="meter-fill" id="meterFill"></div>
+                    </div>
+                </div>
+
+                <div class="message" id="message">
+                    La neurona está en reposo, con un potencial aproximado de −70 mV.
+                </div>
+            </section>
+
+            <section class="info-card">
+                <h2>Secuencia biológica</h2>
+                <ol class="info-list">
+                    <li>
+                        <span class="step-number">1</span>
+                        <span><b>Despolarización.</b> El estímulo inicia un potencial de acción en la primera neurona.</span>
+                    </li>
+                    <li>
+                        <span class="step-number">2</span>
+                        <span><b>Propagación.</b> La señal eléctrica recorre el axón hasta el botón terminal.</span>
+                    </li>
+                    <li>
+                        <span class="step-number">3</span>
+                        <span><b>Sinapsis.</b> Se liberan neurotransmisores en la hendidura sináptica.</span>
+                    </li>
+                    <li>
+                        <span class="step-number">4</span>
+                        <span><b>Respuesta.</b> Los receptores activan una señal en la segunda neurona.</span>
+                    </li>
+                </ol>
+            </section>
+        </aside>
+    </section>
+
+    <div class="footer-note">
+        Modelo conceptual educativo. No representa todas las dinámicas electroquímicas de una neurona real.
+    </div>
+</main>
+
+<script>
+(() => {
+    const pulse = document.getElementById('pulse');
+    const pulseRing = document.getElementById('pulseRing');
+    const postPulse = document.getElementById('postPulse');
+    const postRing = document.getElementById('postRing');
+    const transmitters = [...document.querySelectorAll('.transmitter')];
+    const receptors = [...document.querySelectorAll('.receptor')];
+    const soma2 = document.getElementById('soma2');
+    const potentialLine = document.getElementById('potentialLine');
+
+    const stimulateBtn = document.getElementById('stimulateBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const intensity = document.getElementById('intensity');
+    const intensityOut = document.getElementById('intensityOut');
+    const speed = document.getElementById('speed');
+    const speedOut = document.getElementById('speedOut');
+    const autoToggle = document.getElementById('autoToggle');
+    const meterFill = document.getElementById('meterFill');
+    const meterValue = document.getElementById('meterValue');
+    const message = document.getElementById('message');
+    const neuron1Click = document.getElementById('neuron1Click');
+    const neuron2Click = document.getElementById('neuron2Click');
+
+    let running = false;
+    let autoTimer = null;
+    let animationFrame = null;
+    let sequenceToken = 0;
+
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+    const lerp = (a, b, t) => a + (b - a) * t;
+
+    function easeInOut(t) {
+        return t < .5 ? 2*t*t : 1 - Math.pow(-2*t + 2, 2)/2;
+    }
+
+    function setMessage(text) {
+        message.textContent = text;
+    }
+
+    function setMeter(value) {
+        const v = clamp(value, 0, 100);
+        meterFill.style.width = `${v}%`;
+        meterValue.textContent = `${Math.round(v)}%`;
+    }
+
+    function setPotential(points) {
+        potentialLine.setAttribute('d', points);
+    }
+
+    function restingPotential() {
+        setPotential('M64 80 L352 80');
+    }
+
+    function actionPotential(intensityFactor = .7) {
+        const peakY = lerp(33, 15, intensityFactor);
+        const afterY = lerp(86, 92, intensityFactor);
+        setPotential(
+            `M64 80 L118 80
+             C130 80 136 78 143 72
+             C151 64 158 42 167 ${peakY}
+             C174 20 180 34 186 52
+             C194 71 203 82 216 ${afterY}
+             C234 92 248 82 269 80
+             L352 80`
+        );
+    }
+
+    function animate(duration, update) {
+        return new Promise(resolve => {
+            const start = performance.now();
+            const token = sequenceToken;
+
+            function frame(now) {
+                if (token !== sequenceToken) {
+                    resolve(false);
+                    return;
+                }
+                const t = clamp((now - start) / duration, 0, 1);
+                update(t);
+                if (t < 1) {
+                    animationFrame = requestAnimationFrame(frame);
+                } else {
+                    resolve(true);
+                }
+            }
+            animationFrame = requestAnimationFrame(frame);
+        });
+    }
+
+    function setPulse(el, ring, x, y, opacity = 1, scale = 1) {
+        el.setAttribute('cx', x);
+        el.setAttribute('cy', y);
+        el.style.opacity = opacity;
+        el.setAttribute('r', 9 * scale);
+
+        ring.setAttribute('cx', x);
+        ring.setAttribute('cy', y);
+        ring.style.opacity = opacity * .72;
+        ring.setAttribute('r', 17 * scale);
+    }
+
+    function resetVisuals() {
+        pulse.style.opacity = 0;
+        pulseRing.style.opacity = 0;
+        postPulse.style.opacity = 0;
+        postRing.style.opacity = 0;
+        transmitters.forEach(t => {
+            t.style.opacity = 0;
+            t.setAttribute('transform', '');
+        });
+        receptors.forEach(r => r.classList.remove('active'));
+        soma2.style.filter = 'url(#softGlow)';
+        soma2.style.strokeWidth = '2.2';
+        setMeter(0);
+        restingPotential();
+    }
+
+    async function runSequence() {
+        if (running) return;
+        running = true;
+        stimulateBtn.disabled = true;
+        stimulateBtn.style.filter = 'grayscale(.25) brightness(.72)';
+
+        const token = ++sequenceToken;
+        const intensityFactor = Number(intensity.value) / 100;
+        const speedFactor = Number(speed.value) / 100;
+        const base = 1 / speedFactor;
+
+        resetVisuals();
+        actionPotential(intensityFactor);
+
+        setMessage('1. El estímulo supera el umbral y despolariza la membrana de la primera neurona.');
+        setMeter(10 + intensityFactor * 20);
+
+        setPulse(pulse, pulseRing, 196, 292, 1, .9 + intensityFactor * .35);
+
+        await animate(420 * base, t => {
+            const s = 1 + Math.sin(t * Math.PI) * .45;
+            setPulse(pulse, pulseRing, 196, 292, 1, s);
+        });
+        if (token !== sequenceToken) return;
+
+        setMessage('2. El potencial de acción se propaga por el axón mielinizado.');
+        await animate(1250 * base, t => {
+            const e = easeInOut(t);
+            const x = lerp(215, 484, e);
+            const y = 291 + Math.sin(e * Math.PI * 2) * 3;
+            const flicker = .82 + Math.sin(t * Math.PI * 10) * .18;
+            setPulse(pulse, pulseRing, x, y, flicker, .9 + intensityFactor * .3);
+            setMeter(25 + e * 35);
+        });
+        if (token !== sequenceToken) return;
+
+        setMessage('3. La llegada del impulso provoca la liberación de neurotransmisores.');
+        pulse.style.opacity = 0;
+        pulseRing.style.opacity = 0;
+
+        const starts = [
+            {x: 520, y: 255, tx: 596, ty: 253},
+            {x: 520, y: 278, tx: 596, ty: 282},
+            {x: 520, y: 301, tx: 596, ty: 311},
+            {x: 520, y: 325, tx: 596, ty: 340},
+            {x: 520, y: 342, tx: 590, ty: 324},
+            {x: 520, y: 289, tx: 588, ty: 267}
+        ];
+
+        transmitters.forEach((node, i) => {
+            node.style.opacity = Math.min(1, .45 + intensityFactor * .8);
+        });
+
+        await animate(900 * base, t => {
+            const e = easeInOut(t);
+            transmitters.forEach((node, i) => {
+                const p = starts[i];
+                const offset = Math.sin((t + i) * Math.PI * 3) * 4;
+                const x = lerp(p.x, p.tx, e);
+                const y = lerp(p.y, p.ty, e) + offset * (1 - e);
+                node.setAttribute('transform', `translate(${x - p.x} ${y - p.y})`);
+            });
+            setMeter(60 + e * 35);
+        });
+        if (token !== sequenceToken) return;
+
+        receptors.forEach((r, i) => {
+            setTimeout(() => r.classList.add('active'), i * 60 / speedFactor);
+        });
+
+        setMessage('4. Los neurotransmisores se unen a receptores y generan una respuesta postsináptica.');
+        setPulse(postPulse, postRing, 610, 291, 1, .9);
+
+        await animate(820 * base, t => {
+            const e = easeInOut(t);
+            const x = lerp(610, 716, e);
+            const y = 291 + Math.sin(e * Math.PI) * 4;
+            setPulse(postPulse, postRing, x, y, 1 - e * .12, 1 + Math.sin(t * Math.PI) * .45);
+            soma2.style.strokeWidth = String(2.2 + Math.sin(t * Math.PI) * 4.5);
+            soma2.style.filter = `drop-shadow(0 0 ${8 + 20*Math.sin(t*Math.PI)}px rgba(99,245,187,.9)) url(#softGlow)`;
+            setMeter(95 - e * 18);
+        });
+        if (token !== sequenceToken) return;
+
+        setMessage('La segunda neurona ha recibido la señal. Después de un breve período refractario, el sistema vuelve al reposo.');
+        postPulse.style.opacity = 0;
+        postRing.style.opacity = 0;
+
+        await sleep(900 * base);
+        if (token !== sequenceToken) return;
+
+        await animate(620 * base, t => {
+            transmitters.forEach(node => {
+                node.style.opacity = 1 - t;
+            });
+            receptors.forEach((r, i) => {
+                if (t > .28 + i * .08) r.classList.remove('active');
+            });
+            setMeter(70 * (1 - t));
+        });
+
+        soma2.style.filter = 'url(#softGlow)';
+        soma2.style.strokeWidth = '2.2';
+        restingPotential();
+        setMessage('La neurona está nuevamente en reposo, lista para recibir otro estímulo.');
+        running = false;
+        stimulateBtn.disabled = false;
+        stimulateBtn.style.filter = '';
+    }
+
+    function hardReset() {
+        sequenceToken++;
+        running = false;
+        if (animationFrame) cancelAnimationFrame(animationFrame);
+        resetVisuals();
+        stimulateBtn.disabled = false;
+        stimulateBtn.style.filter = '';
+        setMessage('La neurona está en reposo, con un potencial aproximado de −70 mV.');
+    }
+
+    function updateOutputs() {
+        intensityOut.textContent = `${intensity.value}%`;
+        speedOut.textContent = `${(Number(speed.value) / 100).toFixed(1)}×`;
+    }
+
+    function configureAuto() {
+        if (autoTimer) {
+            clearInterval(autoTimer);
+            autoTimer = null;
+        }
+        if (autoToggle.checked) {
+            runSequence();
+            autoTimer = setInterval(() => {
+                if (!running) runSequence();
+            }, 5200 / (Number(speed.value) / 100));
+        }
+    }
+
+    stimulateBtn.addEventListener('click', runSequence);
+    neuron1Click.addEventListener('click', runSequence);
+    neuron2Click.addEventListener('click', () => {
+        setMessage('La transmisión comienza en la neurona presináptica. Haga clic en la primera neurona para iniciar el impulso.');
+    });
+
+    resetBtn.addEventListener('click', hardReset);
+    intensity.addEventListener('input', updateOutputs);
+    speed.addEventListener('input', () => {
+        updateOutputs();
+        if (autoToggle.checked) configureAuto();
+    });
+    autoToggle.addEventListener('change', configureAuto);
+
+    window.addEventListener('keydown', event => {
+        if (event.code === 'Space') {
+            event.preventDefault();
+            runSequence();
+        }
+        if (event.key.toLowerCase() === 'r') hardReset();
+    });
+
+    updateOutputs();
+    resetVisuals();
+})();
+</script>
+</body>
+</html>
