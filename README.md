@@ -1,4 +1,10 @@
-# Libro-de-la-IA
+# Libro Digital de la IA
+
+Dr. Tomás de Camino Beck, Director Escuela de Sistemas Inteligentes, Universidad CENFOTEC  
+Ing. Gabriela Urbina, Profesora Universidad CENFOTEC  
+
+
+
 Contenido del libro digital de IA
 
 ## En desarrollo
