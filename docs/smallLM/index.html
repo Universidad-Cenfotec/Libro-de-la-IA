@@ -1,0 +1,549 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>LLM Sampling & Temperature Lab</title>
+  <style>
+    :root {
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color: #18212f;
+      background: #f4f6f8;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    main {
+      width: min(1180px, calc(100% - 32px));
+      margin: 28px auto 56px;
+    }
+    h1 { margin: 0 0 6px; font-size: clamp(1.8rem, 3vw, 2.6rem); }
+    .subtitle { margin: 0 0 22px; color: #5f6b7a; }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+    @media (max-width: 850px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: white;
+      border: 1px solid #dfe4ea;
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 4px 18px rgba(0,0,0,.04);
+    }
+    .card.full { grid-column: 1 / -1; }
+    label {
+      display: block;
+      font-weight: 700;
+      margin: 0 0 8px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      resize: vertical;
+      border: 1px solid #cfd6de;
+      border-radius: 10px;
+      padding: 12px;
+      font: inherit;
+    }
+    button, input[type="number"] {
+      font: inherit;
+    }
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 11px 16px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+    button.primary {
+      background: #172b4d;
+      color: white;
+    }
+    button.secondary {
+      background: #e9edf2;
+      color: #18212f;
+    }
+    button:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+    .row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .control {
+      margin-top: 16px;
+    }
+    .switchline {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+    }
+    .switchline input {
+      width: 20px;
+      height: 20px;
+    }
+    .temp-row {
+      display: grid;
+      grid-template-columns: 1fr 90px;
+      gap: 12px;
+      align-items: center;
+    }
+    input[type="range"] { width: 100%; }
+    input[type="number"] {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #cfd6de;
+      border-radius: 8px;
+    }
+    .hint {
+      color: #647184;
+      font-size: .9rem;
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+    .status {
+      background: #eef2f6;
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-top: 14px;
+      font-size: .92rem;
+    }
+    progress {
+      width: 100%;
+      height: 12px;
+      margin-top: 8px;
+    }
+    .tokens {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 10px;
+    }
+    .token {
+      border: 1px solid #cbd4df;
+      background: #f7f9fb;
+      border-radius: 7px;
+      padding: 6px 8px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: .85rem;
+      cursor: default;
+    }
+    .token .id {
+      color: #7a8796;
+      font-size: .72rem;
+      display: block;
+      margin-top: 2px;
+    }
+    .token.special {
+      background: #fff6df;
+      border-color: #e5cf96;
+    }
+    .output {
+      border-left: 4px solid #172b4d;
+      padding: 10px 14px;
+      margin-top: 14px;
+      background: #fafbfc;
+      border-radius: 0 10px 10px 0;
+    }
+    .output .meta {
+      color: #6b7785;
+      font-size: .82rem;
+      margin-bottom: 7px;
+    }
+    .output .text {
+      white-space: pre-wrap;
+      line-height: 1.5;
+    }
+    .empty {
+      color: #778394;
+      font-style: italic;
+    }
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    }
+    .explain {
+      margin: 0;
+      line-height: 1.55;
+      color: #3f4b59;
+    }
+  </style>
+</head>
+<body>
+<main>
+  <h1>LLM Sampling & Temperature Lab</h1>
+  <p class="subtitle">Experimento local en el navegador con Transformers.js y SmolLM2.</p>
+
+  <div class="grid">
+    <section class="card">
+      <label for="prompt">Prompt</label>
+      <textarea id="prompt">how many r's in strawberry?</textarea>
+
+      <div class="control">
+        <div class="switchline">
+          <input id="sampling" type="checkbox" checked />
+          <label for="sampling" style="margin:0">Usar sampling</label>
+        </div>
+        <div class="hint">
+          Activado: el siguiente token se muestrea de la distribución de probabilidades.
+          Desactivado: se usa generación greedy y la temperatura deja de tener efecto.
+        </div>
+      </div>
+
+      <div class="control">
+        <label for="temperatureRange">Temperatura</label>
+        <div class="temp-row">
+          <input id="temperatureRange" type="range" min="0.1" max="4" step="0.01" value="1" />
+          <input id="temperatureNumber" type="number" min="0.1" max="4" step="0.01" value="1.00" />
+        </div>
+        <div class="hint">
+          Baja temperatura → distribución más concentrada. Alta temperatura → distribución más plana y más variación.
+        </div>
+      </div>
+
+      <div class="control">
+        <label for="maxTokens">Máximo de nuevos tokens</label>
+        <input id="maxTokens" type="number" min="1" max="512" step="1" value="128" />
+      </div>
+
+      <div class="row" style="margin-top:18px">
+        <button id="generate" class="primary" disabled>Generar</button>
+        <button id="tokenize" class="secondary" disabled>Tokenizar</button>
+        <button id="clear" class="secondary">Limpiar resultados</button>
+      </div>
+
+      <div class="status">
+        <div id="statusText">Inicializando Transformers.js…</div>
+        <progress id="progress" max="100" value="0"></progress>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 style="margin-top:0">Qué estamos controlando</h2>
+      <p class="explain">
+        Con <strong>sampling activado</strong>, el modelo elige el siguiente token de una distribución.
+        La temperatura modifica esa distribución antes del muestreo.
+      </p>
+      <p class="explain" style="margin-top:12px">
+        Para logits <code>zᵢ</code>, la probabilidad es proporcional a
+        <code>exp(zᵢ / T)</code>. Cuando <code>T &lt; 1</code>, las diferencias se amplifican.
+        Cuando <code>T &gt; 1</code>, la distribución se aplana.
+      </p>
+      <p class="explain" style="margin-top:12px">
+        Con <strong>sampling desactivado</strong>, esta demostración usa generación greedy:
+        se selecciona sistemáticamente el token de mayor puntuación.
+      </p>
+      <div class="status" id="deviceInfo">Detectando dispositivo…</div>
+    </section>
+
+    <section class="card full">
+      <h2 style="margin-top:0">Tokenización del prompt</h2>
+      <div class="hint">Cada bloque muestra el token y debajo su ID en el vocabulario.</div>
+      <div id="rawTokenSummary" class="status">Todavía no se ha tokenizado.</div>
+      <div id="rawTokens" class="tokens"></div>
+    </section>
+
+    <section class="card full">
+      <h2 style="margin-top:0">Entrada real al modelo</h2>
+      <div class="hint">
+        Un modelo instruct no recibe solamente el texto. El chat template agrega marcas de rol y tokens de control.
+      </div>
+      <div id="chatTemplateText" class="status">Todavía no se ha construido el chat template.</div>
+      <div id="chatTokenSummary" class="status" style="margin-top:10px">—</div>
+      <div id="chatTokens" class="tokens"></div>
+    </section>
+
+    <section class="card full">
+      <div class="row" style="justify-content:space-between">
+        <h2 style="margin:0">Generaciones</h2>
+        <span class="hint">Ejecute varias veces con el mismo prompt y compare.</span>
+      </div>
+      <div id="outputs"><p class="empty">Aún no hay generaciones.</p></div>
+    </section>
+  </div>
+</main>
+
+<script type="module">
+  const MODEL_ID = "HuggingFaceTB/SmolLM2-1.7B-Instruct";
+  const TRANSFORMERS_URL =
+    "https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.8.1";
+
+  const promptEl = document.querySelector("#prompt");
+  const samplingEl = document.querySelector("#sampling");
+  const tempRangeEl = document.querySelector("#temperatureRange");
+  const tempNumberEl = document.querySelector("#temperatureNumber");
+  const maxTokensEl = document.querySelector("#maxTokens");
+  const generateBtn = document.querySelector("#generate");
+  const tokenizeBtn = document.querySelector("#tokenize");
+  const clearBtn = document.querySelector("#clear");
+  const statusText = document.querySelector("#statusText");
+  const progressEl = document.querySelector("#progress");
+  const deviceInfo = document.querySelector("#deviceInfo");
+  const rawTokensEl = document.querySelector("#rawTokens");
+  const rawSummaryEl = document.querySelector("#rawTokenSummary");
+  const chatTokensEl = document.querySelector("#chatTokens");
+  const chatSummaryEl = document.querySelector("#chatTokenSummary");
+  const chatTemplateTextEl = document.querySelector("#chatTemplateText");
+  const outputsEl = document.querySelector("#outputs");
+
+  let generator = null;
+  let tokenizer = null;
+  let running = false;
+
+  function syncTemperature(value) {
+    const n = Math.min(4, Math.max(0.1, Number(value) || 1));
+    tempRangeEl.value = n;
+    tempNumberEl.value = n.toFixed(2);
+  }
+
+  tempRangeEl.addEventListener("input", () => syncTemperature(tempRangeEl.value));
+  tempNumberEl.addEventListener("input", () => syncTemperature(tempNumberEl.value));
+
+  function updateSamplingUI() {
+    const enabled = samplingEl.checked;
+    tempRangeEl.disabled = !enabled;
+    tempNumberEl.disabled = !enabled;
+  }
+  samplingEl.addEventListener("change", updateSamplingUI);
+  updateSamplingUI();
+
+  clearBtn.addEventListener("click", () => {
+    outputsEl.innerHTML = '<p class="empty">Aún no hay generaciones.</p>';
+  });
+
+  function displayToken(container, tokenText, id, special = false) {
+    const item = document.createElement("span");
+    item.className = "token" + (special ? " special" : "");
+    item.title = `Token ID: ${id}`;
+
+    const visible = String(tokenText)
+      .replaceAll(" ", "␠")
+      .replaceAll("\n", "↵")
+      .replaceAll("\t", "⇥");
+
+    const text = document.createElement("span");
+    text.textContent = visible === "" ? "∅" : visible;
+
+    const idEl = document.createElement("span");
+    idEl.className = "id";
+    idEl.textContent = `id ${id}`;
+
+    item.append(text, idEl);
+    container.appendChild(item);
+  }
+
+  function getIds(encoded) {
+    // tokenizer.encode() returns an Array in Transformers.js v3.
+    if (Array.isArray(encoded)) return encoded.map(Number);
+
+    // Fallback for tokenizer(...) style outputs / tensors.
+    const ids = encoded?.input_ids?.data ?? encoded?.input_ids;
+    return ids ? Array.from(ids, Number) : [];
+  }
+
+  function tokenStringsForIds(ids) {
+    // Decoding one token at a time is especially useful pedagogically because
+    // it exposes whitespace and fragments as the tokenizer/model sees them.
+    return ids.map(id => {
+      try {
+        return tokenizer.decode([id], { skip_special_tokens: false });
+      } catch {
+        return "?";
+      }
+    });
+  }
+
+  function renderTokens(container, ids, specialIds = new Set()) {
+    container.innerHTML = "";
+    const pieces = tokenStringsForIds(ids);
+    ids.forEach((id, i) => displayToken(container, pieces[i], id, specialIds.has(id)));
+  }
+
+  async function showTokenization() {
+    if (!tokenizer) return;
+
+    const text = promptEl.value;
+    const messages = [{ role: "user", content: text }];
+
+    // Raw prompt
+    const rawIds = getIds(tokenizer.encode(text, { add_special_tokens: false }));
+    renderTokens(rawTokensEl, rawIds);
+    rawSummaryEl.textContent = `${rawIds.length} tokens para ${text.length} caracteres.`;
+
+    // Actual formatted chat input
+    let formattedText = "";
+    let chatIds = [];
+
+    try {
+      formattedText = tokenizer.apply_chat_template(messages, {
+        tokenize: false,
+        add_generation_prompt: true,
+      });
+
+      const templated = tokenizer.apply_chat_template(messages, {
+        tokenize: true,
+        add_generation_prompt: true,
+        return_tensor: false,
+      });
+
+      chatIds = getIds(templated);
+
+      // Some tokenizer implementations return token IDs more predictably
+      // by encoding the already formatted chat string.
+      if (!chatIds.length && formattedText) {
+        chatIds = getIds(tokenizer.encode(formattedText, { add_special_tokens: false }));
+      }
+    } catch (err) {
+      formattedText = "(El tokenizer no expuso un chat template compatible.)";
+      chatIds = rawIds;
+    }
+
+    chatTemplateTextEl.textContent = formattedText;
+    renderTokens(chatTokensEl, chatIds);
+    chatSummaryEl.textContent =
+      `${chatIds.length} tokens en la entrada completa al modelo, incluyendo el chat template.`;
+  }
+
+  tokenizeBtn.addEventListener("click", showTokenization);
+
+  function addOutput(text, sampling, temperature, maxTokens) {
+    const empty = outputsEl.querySelector(".empty");
+    if (empty) empty.remove();
+
+    const block = document.createElement("div");
+    block.className = "output";
+
+    const meta = document.createElement("div");
+    meta.className = "meta";
+    meta.textContent =
+      `sampling=${sampling} · temperature=${sampling ? temperature.toFixed(2) : "sin efecto"} · max_new_tokens=${maxTokens}`;
+
+    const body = document.createElement("div");
+    body.className = "text";
+    body.textContent = text;
+
+    block.append(meta, body);
+    outputsEl.prepend(block);
+  }
+
+  generateBtn.addEventListener("click", async () => {
+    if (!generator || running) return;
+
+    running = true;
+    generateBtn.disabled = true;
+    tokenizeBtn.disabled = true;
+
+    const text = promptEl.value.trim();
+    const sampling = samplingEl.checked;
+    const temperature = Number(tempRangeEl.value);
+    const maxTokens = Math.max(1, Math.min(512, Number(maxTokensEl.value) || 128));
+
+    if (!text) {
+      statusText.textContent = "Escriba un prompt.";
+      running = false;
+      generateBtn.disabled = false;
+      tokenizeBtn.disabled = false;
+      return;
+    }
+
+    try {
+      await showTokenization();
+      statusText.textContent = "Generando…";
+
+      const messages = [{ role: "user", content: text }];
+
+      const generationOptions = {
+        max_new_tokens: maxTokens,
+        do_sample: sampling,
+      };
+
+      // Avoid passing temperature when sampling is off.
+      // This makes explicit that temperature is a sampling control here.
+      if (sampling) {
+        generationOptions.temperature = temperature;
+      }
+
+      const results = await generator(messages, generationOptions);
+
+      let response = "";
+      const generated = results?.[0]?.generated_text;
+
+      if (Array.isArray(generated)) {
+        response = generated.at(-1)?.content ?? JSON.stringify(generated);
+      } else {
+        response = String(generated ?? results);
+      }
+
+      addOutput(response, sampling, temperature, maxTokens);
+      statusText.textContent = "Listo. Puede generar otra vez para comparar.";
+    } catch (err) {
+      console.error(err);
+      statusText.textContent = `Error: ${err.message ?? err}`;
+    } finally {
+      running = false;
+      generateBtn.disabled = false;
+      tokenizeBtn.disabled = false;
+    }
+  });
+
+  function loadingProgress(info) {
+    // Transformers.js progress callback emits several event types.
+    if (typeof info?.progress === "number") {
+      progressEl.value = info.progress;
+    }
+    const file = info?.file ? ` · ${info.file}` : "";
+    const label = info?.status ?? "cargando";
+    statusText.textContent = `${label}${file}`;
+  }
+
+  async function init() {
+    try {
+      const { pipeline } = await import(TRANSFORMERS_URL);
+
+      const useWebGPU = !!navigator.gpu;
+      const device = useWebGPU ? "webgpu" : "wasm";
+      const dtype = useWebGPU ? "q4f16" : "q4";
+
+      deviceInfo.textContent =
+        `Modelo: ${MODEL_ID} · dispositivo: ${device} · dtype: ${dtype}`;
+
+      statusText.textContent = "Cargando modelo y tokenizer…";
+
+      generator = await pipeline(
+        "text-generation",
+        MODEL_ID,
+        {
+          device,
+          dtype,
+          progress_callback: loadingProgress,
+        }
+      );
+
+      tokenizer = generator.tokenizer;
+
+      progressEl.value = 100;
+      statusText.textContent = "Modelo listo.";
+      generateBtn.disabled = false;
+      tokenizeBtn.disabled = false;
+
+      await showTokenization();
+    } catch (err) {
+      console.error(err);
+      statusText.textContent =
+        `No se pudo cargar el modelo: ${err.message ?? err}`;
+      deviceInfo.textContent =
+        "Si abrió el archivo directamente y el navegador bloquea módulos o recursos, sírvalo desde un servidor HTTP local.";
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>
